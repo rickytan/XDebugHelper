@@ -1,0 +1,6 @@
+use_frameworks!
+target 'XDebugHelper_Tests' do
+  pod 'XDebugHelper', :path => '../'
+  
+  
+end
