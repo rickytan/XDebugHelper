@@ -1,0 +1,16 @@
+PODS:
+  - XDebugHelper (0.1.0)
+
+DEPENDENCIES:
+  - XDebugHelper (from `../`)
+
+EXTERNAL SOURCES:
+  XDebugHelper:
+    :path: "../"
+
+SPEC CHECKSUMS:
+  XDebugHelper: 0e5056830dbd324084fb0810b5b89187c7c9cfef
+
+PODFILE CHECKSUM: 1e1e4fd13f2f4978288c074046375605a6409a63
+
+COCOAPODS: 1.5.3
