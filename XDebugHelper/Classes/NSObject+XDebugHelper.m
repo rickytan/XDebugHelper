@@ -6,6 +6,7 @@
 //
 
 #import <objc/runtime.h>
+#import <objc/message.h>
 #import "NSObject+XDebugHelper.h"
 #import "NSValue+XDebugHelper.h"
 #import "XDHIvar.h"
@@ -83,8 +84,25 @@ static NSArray <XDHIvar *> * IvarsOfObject(NSObject *instance, IvarINFO *info)
 
 @implementation NSObject (XDebugHelper)
 
-- (id)debugQuickLookObject
++ (void)load
 {
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        Method m1 = class_getInstanceMethod(self, @selector(xdh_debugQuickLookObject));
+        if (class_addMethod(self, @selector(debugQuickLookObject), _objc_msgForward, method_getTypeEncoding(m1))) {
+            Method m0 = class_getInstanceMethod(self, @selector(debugQuickLookObject));
+            method_exchangeImplementations(m0, m1);
+        }
+    });
+}
+
+- (id)xdh_debugQuickLookObject
+{
+    id object = [self xdh_debugQuickLookObject];
+    if (object) {
+        return object;
+    }
+    
     IvarINFO info = {0};
     NSArray <XDHIvar *> *ivars = IvarsOfObject(self, &info);
     NSString *formatingString = [NSString stringWithFormat:@"%%%ds %%%ds = %%@", info.maxLengthOfTypeName + 1, info.maxLengthOfName + 1];
@@ -93,7 +111,7 @@ static NSArray <XDHIvar *> * IvarsOfObject(NSObject *instance, IvarINFO *info)
         [strings addObject:[NSString stringWithFormat:formatingString, ivar.typeName.UTF8String, ivar.name.UTF8String, ivar.value.xdh_stringRepresentation]];
     }
     return [[NSAttributedString alloc] initWithString:[strings componentsJoinedByString:@"\n"]
-                                           attributes:@{NSFontAttributeName: [UIFont fontWithName:@"Countier" size:12],
+                                           attributes:@{NSFontAttributeName: [UIFont fontWithName:@"Courier" size:12],
                                                         NSForegroundColorAttributeName: [UIColor darkTextColor],
                                                         }];
 }
