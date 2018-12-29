@@ -7,6 +7,7 @@
 
 #import <objc/runtime.h>
 #import "NSObject+XDebugHelper.h"
+#import "NSValue+XDebugHelper.h"
 #import "XDHIvar.h"
 
 typedef struct {
@@ -46,7 +47,8 @@ static void IvarsOfClass(__unsafe_unretained Class cls, NSObject *instance, NSMu
             else {
                 void *value = NULL;
                 memcpy(&value, (__bridge void *)instance + lastIvar.offset, lastIvar.size);
-                lastIvar.value = [NSValue value:&value withObjCType:lastIvar.typeEncoding];
+                // ???: bit field will return nil
+                lastIvar.value = [NSValue valueWithBytes:&value objCType:lastIvar.typeEncoding];
             }
         }
         
@@ -83,19 +85,17 @@ static NSArray <XDHIvar *> * IvarsOfObject(NSObject *instance, IvarINFO *info)
 
 - (id)debugQuickLookObject
 {
-    return nil;
-}
-
-- (NSString *)debugDescription
-{
     IvarINFO info = {0};
     NSArray <XDHIvar *> *ivars = IvarsOfObject(self, &info);
     NSString *formatingString = [NSString stringWithFormat:@"%%%ds %%%ds = %%@", info.maxLengthOfTypeName + 1, info.maxLengthOfName + 1];
     NSMutableArray *strings = [NSMutableArray arrayWithCapacity:ivars.count];
     for (XDHIvar *ivar in ivars) {
-        [strings addObject:[NSString stringWithFormat:formatingString, ivar.typeName.UTF8String, ivar.name.UTF8String, ivar.value.description]];
+        [strings addObject:[NSString stringWithFormat:formatingString, ivar.typeName.UTF8String, ivar.name.UTF8String, ivar.value.xdh_stringRepresentation]];
     }
-    return [strings componentsJoinedByString:@"\n"];
+    return [[NSAttributedString alloc] initWithString:[strings componentsJoinedByString:@"\n"]
+                                           attributes:@{NSFontAttributeName: [UIFont fontWithName:@"Countier" size:12],
+                                                        NSForegroundColorAttributeName: [UIColor darkTextColor],
+                                                        }];
 }
 
 @end

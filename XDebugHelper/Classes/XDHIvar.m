@@ -143,6 +143,21 @@
     return _typeName;
 }
 
+- (size_t)size
+{
+    if (_size == 0) {
+        if (_typeEncoding[0] != 'b') {
+            NSUInteger size, align;
+            NSGetSizeAndAlignment(_typeEncoding, &size, &align);
+            _size = size;
+        }
+        else {
+            _size = 1;
+        }
+    }
+    return _size;
+}
+
 - (NSString *)description
 {
     return [NSString stringWithFormat:@"<%@: %p name=%@, offset=%lu, size=%lu, typeName=%@, encoding=%s>", NSStringFromClass(self.class), self, self.name, self.offset, self.size, self.typeName, self.typeEncoding];
