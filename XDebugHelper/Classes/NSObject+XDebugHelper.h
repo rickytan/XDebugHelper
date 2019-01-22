@@ -10,7 +10,8 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @interface NSObject (XDebugHelper)
-
+- (void)ivarDump;
+- (void)propertyDump;
 @end
 
 NS_ASSUME_NONNULL_END

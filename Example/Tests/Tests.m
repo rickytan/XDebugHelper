@@ -6,7 +6,9 @@
 //  Copyright (c) 2018 rickytan. All rights reserved.
 //
 
+#import <XDebugHelper/XDebugHelper.h>
 @import XCTest;
+@import UIKit;
 
 @interface Tests : XCTestCase
 
@@ -28,7 +30,8 @@
 
 - (void)testExample
 {
-    XCTFail(@"No implementation for \"%s\"", __PRETTY_FUNCTION__);
+    UIView *view = [UIView new];
+    [view ivarDump];
 }
 
 @end

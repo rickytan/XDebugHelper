@@ -27,6 +27,13 @@
             return [NSString stringWithFormat:@"%@", value ?: @"nil"];
         }
             break;
+        case '^':
+        {
+            void * value = NULL;
+            [self getValue:&value];
+            return value ? [NSString stringWithFormat:@"%p", value] : @"NULL";
+        }
+            break;
         case 'b':
         {
             void *value = NULL;
@@ -125,6 +132,15 @@
                 NSRange value = {0};
                 [self getValue:&value];
                 return NSStringFromRange(value);
+            } else if (strncmp(type, @encode(CGAffineTransform), size) == 0) {
+                return NSStringFromCGAffineTransform([self CGAffineTransformValue]);
+            } else if (strncmp(type, @encode(CATransform3D), size) == 0) {
+                CATransform3D transform = [self CATransform3DValue];
+                return [NSString stringWithFormat:@"{m11 = %.6lf, m12 = %.6lf, m13 = %.6lf, m14 = %.6lf, m21 = %.6lf, m22 = %.6lf, m23 = %.6lf, m24 = %.6lf, m31 = %.6lf, m32 = %.6lf, m33 = %.6lf, m34 = %.6lf, m41 = %.6lf, m42 = %.6lf, m43 = %.6lf, m44 = %.6lf}",
+                        transform.m11, transform.m12, transform.m13, transform.m14,
+                        transform.m21, transform.m22, transform.m23, transform.m24,
+                        transform.m31, transform.m32, transform.m33, transform.m34,
+                        transform.m41, transform.m42, transform.m43, transform.m44];
             } else {
                 return @"{}";
             }
@@ -133,7 +149,7 @@
         default:
             break;
     }
-    return nil;
+    return @"nil";
 }
 
 @end

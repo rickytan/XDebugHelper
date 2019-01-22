@@ -10,6 +10,7 @@
 #import "NSObject+XDebugHelper.h"
 #import "NSValue+XDebugHelper.h"
 #import "XDHIvar.h"
+#import "XDHProperty.h"
 
 typedef struct {
     size_t maxLengthOfName;
@@ -82,6 +83,58 @@ static NSArray <XDHIvar *> * IvarsOfObject(NSObject *instance, IvarINFO *info)
     return [array copy];
 }
 
+static void PropertyOfClass(__unsafe_unretained Class cls, NSObject *instance, NSMutableArray <XDHProperty *> * arrayOfIvars, IvarINFO *info) {
+    if (!cls) {
+        return;
+    }
+    Class superCls = class_getSuperclass(cls);
+    PropertyOfClass(superCls, instance, arrayOfIvars, info);
+    
+    uint32_t count = 0;
+    objc_property_t *firstProp = class_copyPropertyList(cls, &count);
+    for (uint32_t i = 0; i < count; ++i) {
+        objc_property_t prop = firstProp[i];
+        XDHProperty *property = [XDHProperty PropertyWithProperty:prop];
+        if (![property.typeName isEqualToString:@"void *"]) {
+            id value = nil;
+            @try {
+                value = [instance valueForKey:property.name];
+            } @catch (NSException *exception) {
+                if (property.getter) {
+                    __unsafe_unretained id result = [instance performSelector:property.getter withObject:nil];
+                    value = [NSValue value:&result withObjCType:property.typeEncoding];
+                }
+                else {
+                    value = nil;
+                }
+            } @finally {
+                if ([value isKindOfClass:[NSValue class]]) {
+                    property.value = value;
+                }
+                else {
+                    property.value = [NSValue valueWithNonretainedObject:value];
+                }
+            }
+        }
+        
+        if (info) {
+            info->maxLengthOfName = MAX(info->maxLengthOfName, property.name.length);
+            info->maxLengthOfTypeName = MAX(info->maxLengthOfTypeName, property.typeName.length);
+        }
+
+        [arrayOfIvars addObject:property];
+    }
+    free(firstProp);
+}
+
+static NSArray <XDHProperty *> * PropertyOfObject(NSObject *instance, IvarINFO *info)
+{
+    Class objectClass = [instance class];
+    NSMutableArray <XDHProperty *> *array = [NSMutableArray arrayWithCapacity:class_getInstanceSize(objectClass) / sizeof(void *)];
+    PropertyOfClass(objectClass, instance, array, info);
+    return [array copy];
+}
+
 @implementation NSObject (XDebugHelper)
 
 + (void)load
@@ -96,6 +149,32 @@ static NSArray <XDHIvar *> * IvarsOfObject(NSObject *instance, IvarINFO *info)
     });
 }
 
+- (NSString *)ivarDump
+{
+    IvarINFO info = {0};
+    NSArray <XDHIvar *> *ivars = IvarsOfObject(self, &info);
+    NSString *formatingString = [NSString stringWithFormat:@"%%%lus %%%lus = %%@", info.maxLengthOfTypeName + 1, info.maxLengthOfName + 1];
+    NSMutableArray *strings = [NSMutableArray arrayWithCapacity:ivars.count + 1];
+    [strings addObject:@""];
+    for (XDHIvar *ivar in ivars) {
+        [strings addObject:[NSString stringWithFormat:formatingString, ivar.typeName.UTF8String, ivar.name.UTF8String, ivar.value.xdh_stringRepresentation]];
+    }
+    NSLog(@"%@", [strings componentsJoinedByString:@"\n"]);
+}
+
+- (NSString *)propertyDump
+{
+    IvarINFO info = {0};
+    NSArray <XDHProperty *> *properties = PropertyOfObject(self, &info);
+    NSString *formatingString = [NSString stringWithFormat:@"%%%lus %%%lus = %%@", info.maxLengthOfTypeName + 1, info.maxLengthOfName + 1];
+    NSMutableArray *strings = [NSMutableArray arrayWithCapacity:properties.count + 1];
+    [strings addObject:@""];
+    for (XDHProperty *property in properties) {
+        [strings addObject:[NSString stringWithFormat:formatingString, property.typeName.UTF8String, property.name.UTF8String, property.value.xdh_stringRepresentation]];
+    }
+    NSLog(@"%@", [strings componentsJoinedByString:@"\n"]);
+}
+
 - (id)xdh_debugQuickLookObject
 {
     id object = [self xdh_debugQuickLookObject];
@@ -105,7 +184,7 @@ static NSArray <XDHIvar *> * IvarsOfObject(NSObject *instance, IvarINFO *info)
     
     IvarINFO info = {0};
     NSArray <XDHIvar *> *ivars = IvarsOfObject(self, &info);
-    NSString *formatingString = [NSString stringWithFormat:@"%%%ds %%%ds = %%@", info.maxLengthOfTypeName + 1, info.maxLengthOfName + 1];
+    NSString *formatingString = [NSString stringWithFormat:@"%%%lus %%%lus = %%@", info.maxLengthOfTypeName + 1, info.maxLengthOfName + 1];
     NSMutableArray *strings = [NSMutableArray arrayWithCapacity:ivars.count];
     for (XDHIvar *ivar in ivars) {
         [strings addObject:[NSString stringWithFormat:formatingString, ivar.typeName.UTF8String, ivar.name.UTF8String, ivar.value.xdh_stringRepresentation]];
